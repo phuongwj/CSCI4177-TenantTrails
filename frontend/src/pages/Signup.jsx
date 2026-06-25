@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { users, getInitials } from "../data/mockData";
 
 export default function Signup() {
   const [name, setName] = useState("");
@@ -10,11 +9,11 @@ export default function Signup() {
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [err, setErr] = useState({});
-  const { setUser } = useAuth();
+  const { signup } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  function handleSignup() {
+  async function handleSignup() {
     const e = {};
     if (!name.trim()) e.name = true;
     if (!email.trim() || !email.includes("@")) e.email = true;
@@ -22,12 +21,18 @@ export default function Signup() {
     if (password !== confirm) e.confirm = true;
     setErr(e);
     if (Object.keys(e).length > 0) return;
-    if (users.find(u => u.email === email.trim())) { showToast("Email already registered", "error"); return; }
-    const newUser = { id: Date.now(), name: name.trim(), email: email.trim(), password, initials: getInitials(name) };
-    users.push(newUser);
-    setUser(newUser);
-    navigate("/app");
-    showToast("Account created. Welcome!", "success");
+
+    try {
+      await signup(name, email, password, confirm);
+
+      navigate("/app");
+      showToast("Account created. Welcome!", "success");
+    } catch (error) {
+      setErr({ email: true})
+      showToast("Error creating account", "failure");
+    }
+
+    
   }
 
   function clr(field) { setErr(prev => { const n = { ...prev }; delete n[field]; return n; }); }

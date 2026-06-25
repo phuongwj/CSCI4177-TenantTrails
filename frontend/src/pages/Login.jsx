@@ -24,10 +24,10 @@ export default function Login() {
       await login(email, password);
 
       navigate("/app");
-      showToast("Welcome back!");
+      showToast("Welcome back!", "success");
     } catch (error) {
       setPassErr(true)
-      showToast("Error logging in");
+      showToast("Error logging in", "failure");
     }
     
   }

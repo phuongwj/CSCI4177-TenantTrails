@@ -29,9 +29,25 @@ export function AuthProvider({ children }) {
     setUser(await res.json())
   }
 
+  async function signup(name, email, password, confirmPassword) {
+    const res = await fetch("http://localhost:5003/api/auth/signup", {
+      method: "POST", 
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ name, email, password, confirmPassword })
+    });
+
+    if (!res.ok) {
+      throw new Error("Error signing up");
+    }
+    setUser(await res.json())
+  }
+
   function logout() { setUser(null); }
   return (
-    <AuthContext.Provider value={{ user, logout, login, loading }}>
+    <AuthContext.Provider value={{ user, logout, login, signup, loading }}>
       {children}
     </AuthContext.Provider>
   );
