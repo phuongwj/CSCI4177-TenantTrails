@@ -1,7 +1,7 @@
 import express from "express";
 import multer from "multer";
 
-import { signUp, logIn, getMe } from "../controllers/userController.js";
+import { signUp, logIn, logOut, getMe } from "../controllers/userController.js";
 import { getAllApartments, getApartmentAndReviews, addReview, addComment } from "../controllers/apartmentController.js";
 import { getUserProfile, updateReview, deleteReview } from "../controllers/profileController.js";
 import { uploadImage } from "../controllers/cloudinaryController.js";
@@ -18,6 +18,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.post("/auth/signup", signUp);
 router.post("/auth/login", logIn);
 router.get("/auth/me", auth, getMe);
+router.post("/auth/logout", auth, logOut);
 
 // =================================
 // User Profile Endpoints

@@ -45,7 +45,21 @@ export function AuthProvider({ children }) {
     setUser(await res.json())
   }
 
-  function logout() { setUser(null); }
+  async function logout() { 
+    const res = await fetch("http://localhost:5003/api/auth/logout", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json"
+      },
+    })
+
+    if (!res.ok) {
+      throw new Error("Error logging out");
+    }
+    setUser(null); 
+  }
+
   return (
     <AuthContext.Provider value={{ user, logout, login, signup, loading }}>
       {children}

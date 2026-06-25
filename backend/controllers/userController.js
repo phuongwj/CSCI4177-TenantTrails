@@ -93,6 +93,11 @@ export const logIn = async (req, res) => {
     }
 }
 
+export const logOut = (req, res) => {
+    res.clearCookie("token");
+    return res.status(200).json({ message: 'Logged out successfully' });
+}
+
 export const getMe = async (req, res) => {
     const id = req.user.id;
     
