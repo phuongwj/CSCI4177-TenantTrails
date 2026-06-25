@@ -8,7 +8,7 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [emailErr, setEmailErr] = useState(false);
   const [passErr, setPassErr] = useState(false);
-  const { login, setUser } = useAuth();
+  const { login } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 

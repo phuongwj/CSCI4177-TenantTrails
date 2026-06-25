@@ -4,11 +4,13 @@ const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetch("http://localhost:5003/api/auth/me", { credentials: "include", })
       .then((res) => (res.ok ? res.json() : null))
-      .then((data) => setUser(data ?? null));
+      .then((data) => setUser(data ?? null))
+      .then(() => setLoading(false))
   }, [])
 
   async function login(email, password) {
@@ -29,7 +31,7 @@ export function AuthProvider({ children }) {
 
   function logout() { setUser(null); }
   return (
-    <AuthContext.Provider value={{ user, setUser, logout, login }}>
+    <AuthContext.Provider value={{ user, logout, login, loading }}>
       {children}
     </AuthContext.Provider>
   );
