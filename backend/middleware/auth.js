@@ -5,8 +5,7 @@ export const signToken = (id) => {
 }
 
 export const auth = async (req, res, next) => {
-    const header = req.headers.authorization;
-    const token = header && header.split(" ")[1];
+    const token = req.cookies.token;
     if (!token) {
         return res.status(401).json({ error: "No token" });
     }
