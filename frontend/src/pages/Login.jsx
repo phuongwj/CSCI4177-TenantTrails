@@ -2,29 +2,34 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { users } from "../data/mockData";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [emailErr, setEmailErr] = useState(false);
   const [passErr, setPassErr] = useState(false);
-  const { setUser } = useAuth();
+  const { login, setUser } = useAuth();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
-  function handleLogin() {
+  async function handleLogin() {
     let valid = true;
     setEmailErr(false);
     setPassErr(false);
     if (!email.trim() || !email.includes("@")) { setEmailErr(true); valid = false; }
     if (!password) { setPassErr(true); valid = false; }
     if (!valid) return;
-    const user = users.find(u => u.email === email.trim() && u.password === password);
-    if (!user) { setPassErr(true); showToast("Invalid email or password", "error"); return; }
-    setUser(user);
-    navigate("/app");
-    showToast("Welcome back, " + user.name.split(" ")[0], "success");
+
+    try {
+      await login(email, password);
+
+      navigate("/app");
+      showToast("Welcome back!");
+    } catch (error) {
+      setPassErr(true)
+      showToast("Error logging in");
+    }
+    
   }
 
   return (
