@@ -1,12 +1,18 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useState, useEffect } from "react";
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
 
+  useEffect(() => {
+    fetch("http://localhost:5003/api/auth/me", { credentials: "include", })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => setUser(data ?? null));
+  }, [])
+
   async function login(email, password) {
-    const res = await fetch(`http://localhost:5003/api/auth/login`, {
+    const res = await fetch("http://localhost:5003/api/auth/login", {
       method: "POST", 
       credentials: "include",
       headers: {

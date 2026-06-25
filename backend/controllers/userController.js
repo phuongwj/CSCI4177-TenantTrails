@@ -5,7 +5,6 @@ import bcrypt from "bcrypt";
 
 function getInitials(name) { return name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2); }
 
-
 export const signUp = async (req, res) => {
     const { name, email, password, confirmPassword } = req.body;
 
@@ -92,4 +91,41 @@ export const logIn = async (req, res) => {
     } catch (error) {
         res.status(500).json({ error: "Error logging in." });
     }
+}
+
+export const getMe = async (req, res) => {
+    const id = req.user.id;
+    
+    if (!id) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    const getMeQuery = `
+        SELECT 
+            email, name, initials
+        FROM
+            users
+        WHERE
+            users.id = ?
+    `;
+
+    try {
+        const [result] = await pool.query(getMeQuery, [id]);
+
+        if (result.length === 0) {
+            return res.status(401).json({ error: "User not found" });
+        }
+
+        const user = result[0];
+
+        const email = user.email;
+        const name = user.name;
+        const initials = user.initials;
+
+        res.status(200).json({ id, email, name, initials });
+    } catch (error) {
+        res.status(500).json({ error: "Error getting user." });
+    }
+
+
 }
