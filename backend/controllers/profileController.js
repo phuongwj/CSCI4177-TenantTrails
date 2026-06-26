@@ -32,10 +32,6 @@ export const getUserProfile = async (req, res) => {
         const [userProfileResult] = await pool.query(getUserProfileQuery, [user_id]);
         const [userCommentsResult] = await pool.query(getUserCommentsQuery, [user_id]);
 
-        if (userProfileResult.length === 0) {
-            return res.status(404).json({ error: "User profile not found." });
-        }
-
         res.status(200).json({ userProfileResult, userCommentsResult });
     } catch (error) {
         res.status(500).json({ error: "Error getting user profile and their reviews" });

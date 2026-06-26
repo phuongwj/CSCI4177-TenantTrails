@@ -30,24 +30,40 @@ export const getApartmentAndReviews = async (req, res) => {
         return res.status(400).json({ error: "Missing required fields "});
     }
 
-    const getApartmentAndReviewsQuery = `
-        SELECT 
-            a.*,
-            r.*
-        FROM
-            apartments a LEFT JOIN reviews r ON a.id = r.apt_id
-        WHERE
-            a.id = ?
+    const getApartmentQuery = `SELECT * FROM apartments WHERE id = ?`;
+
+    const getReviewsQuery = `
+        SELECT
+            r.id, r.apt_id AS aptId, r.user_id AS userId,
+            r.rating, r.body, r.created AS date,
+            u.name AS userName, u.initials AS userInitials
+        FROM reviews r
+            JOIN users u ON r.user_id = u.id
+        WHERE r.apt_id = ?
+        ORDER BY r.created DESC
+    `;
+
+    const getCommentsQuery = `
+        SELECT
+            c.id, c.content AS body, c.review_id AS reviewId,
+            c.user_id AS userId, c.parent_id AS parentId,
+            u.name AS userName, u.initials AS userInitials
+        FROM comments c
+            JOIN users u ON c.user_id = u.id
+        WHERE c.review_id IN (SELECT id FROM reviews WHERE apt_id = ?)
     `;
 
     try {
-        const [result] = await pool.query(getApartmentAndReviewsQuery, [apt_id]);
+        const [apartments] = await pool.query(getApartmentQuery, [apt_id]);
 
-        if (result.length === 0) {
+        if (apartments.length === 0) {
             return res.status(404).json({ error: "Apartment not found." });
         }
 
-        res.status(200).json(result);
+        const [reviews] = await pool.query(getReviewsQuery, [apt_id]);
+        const [comments] = await pool.query(getCommentsQuery, [apt_id]);
+
+        res.status(200).json({ apartment: apartments[0], reviews, comments });
     } catch (error) {
         res.status(500).json({ error: "Error getting apartment and their reviews" });
     }

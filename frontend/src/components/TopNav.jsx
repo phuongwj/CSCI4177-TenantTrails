@@ -7,8 +7,8 @@ export default function TopNav({ search, setSearch }) {
   const navigate = useNavigate();
   const { showToast } = useToast();
 
-  function handleLogout() {
-    logout();
+  async function handleLogout() {
+    await logout();
     showToast("Signed out");
     navigate("/signin");
   }

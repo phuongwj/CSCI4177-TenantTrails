@@ -1,54 +1,92 @@
-import { createContext, useContext, useState } from "react";
-import {
-  apartments as initialApartments,
-  reviews as initialReviews,
-  comments as initialComments,
-} from "../data/mockData";
+import { createContext, useContext, useState, useEffect } from "react";
 
+const API = "http://localhost:5003";
 const DataContext = createContext();
 
 export function DataProvider({ children }) {
-  const [apartments, setApartments] = useState(initialApartments);
-  const [reviews, setReviews] = useState(initialReviews);
-  const [comments, setComments] = useState(initialComments);
+  const [apartments, setApartments] = useState([]);
+  const [reviews, setReviews] = useState([]);
+  const [comments, setComments] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API}/api/apartments`, { credentials: "include" })
+      .then(res => res.ok ? res.json() : [])
+      .then(data => setApartments(data));
+  }, []);
 
   function getAptRating(aptId) {
-    const revs = reviews.filter(r => r.aptId === aptId);
-    if (!revs.length) return 0;
-    return revs.reduce((s, r) => s + r.rating, 0) / revs.length;
+    const apt = apartments.find(a => a.id === aptId);
+    return apt?.rating || 0;
   }
+
   function getAptReviewCount(aptId) {
-    return reviews.filter(r => r.aptId === aptId).length;
+    const apt = apartments.find(a => a.id === aptId);
+    return apt?.reviews || 0;
+  }
+
+  async function fetchApartmentDetail(aptId) {
+    const res = await fetch(`${API}/api/apartment/${aptId}`, { credentials: "include" });
+    if (res.ok) {
+      const data = await res.json();
+      setReviews(data.reviews || []);
+      setComments(data.comments || []);
+    }
   }
 
   function invalidateSummary(aptId) {
     setApartments(prev => prev.map(a => a.id === aptId ? { ...a, aiSummary: null, aiIssues: null } : a));
   }
 
-  function addReview(aptId, userId, rating, body, media) {
-    const review = { id: Date.now(), aptId, userId, rating, body, date: todayStr(), media };
-    setReviews(prev => [...prev, review]);
-    invalidateSummary(aptId);
+  async function addReview(aptId, userId, rating, body) {
+    const res = await fetch(`${API}/api/apartments/${aptId}/review`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, body })
+    });
+    if (res.ok) {
+      await fetchApartmentDetail(aptId);
+      const aptRes = await fetch(`${API}/api/apartments`, { credentials: "include" });
+      if (aptRes.ok) setApartments(await aptRes.json());
+    }
   }
 
-  function editReview(reviewId, rating, body) {
-    let aptId = null;
-    setReviews(prev => prev.map(r => {
-      if (r.id === reviewId) { aptId = r.aptId; return { ...r, rating, body, date: todayStr() }; }
-      return r;
-    }));
-    if (aptId) invalidateSummary(aptId);
+  async function editReview(reviewId, rating, body) {
+    const res = await fetch(`${API}/api/profile/review/${reviewId}`, {
+      method: "PUT",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rating, body })
+    });
+    if (res.ok) {
+      setReviews(prev => prev.map(r => r.id === reviewId ? { ...r, rating, body } : r));
+    }
   }
 
-  function deleteReview(reviewId) {
-    const review = reviews.find(r => r.id === reviewId);
-    setReviews(prev => prev.filter(r => r.id !== reviewId));
-    setComments(prev => prev.filter(c => c.reviewId !== reviewId));
-    if (review) invalidateSummary(review.aptId);
+  async function deleteReview(reviewId) {
+    const res = await fetch(`${API}/api/profile/review/${reviewId}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+    if (res.ok) {
+      setReviews(prev => prev.filter(r => r.id !== reviewId));
+      setComments(prev => prev.filter(c => c.reviewId !== reviewId));
+      const aptRes = await fetch(`${API}/api/apartments`, { credentials: "include" });
+      if (aptRes.ok) setApartments(await aptRes.json());
+    }
   }
 
-  function addComment(reviewId, userId, body) {
-    setComments(prev => [...prev, { id: Date.now(), reviewId, userId, body, date: todayStr() }]);
+  async function addComment(reviewId, userId, body) {
+    const res = await fetch(`${API}/api/reviews/${reviewId}/comment`, {
+      method: "POST",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ content: body })
+    });
+    if (res.ok) {
+      const review = reviews.find(r => r.id === reviewId);
+      if (review) await fetchApartmentDetail(review.aptId);
+    }
   }
 
   function generateAISummary(aptId) {
@@ -68,10 +106,8 @@ export function DataProvider({ children }) {
     if (text.includes('deposit')) themes.push('Deposit handling');
     if (text.includes('laundry')) themes.push('Laundry facilities');
     if (!themes.length) themes.push('Mixed feedback', 'Limited data');
-
     const issues = themes.slice(0, 5);
     const summary = `Based on ${revs.length} tenant reviews, ${apt.name} receives an average rating of ${avgR} out of 5. ${themes.slice(0, 3).join(', ')} are the most frequently mentioned topics. ${revs.length > 2 ? 'Reviewers are divided on the overall experience, with strong opinions on both sides.' : 'More reviews would improve the reliability of this summary.'} This summary was generated from tenant-submitted reviews and should be verified against your own assessment of the property.`;
-
     setApartments(prev => prev.map(a => a.id === aptId ? { ...a, aiIssues: issues, aiSummary: summary } : a));
   }
 
@@ -80,6 +116,7 @@ export function DataProvider({ children }) {
       apartments, reviews, comments,
       getAptRating, getAptReviewCount,
       addReview, editReview, deleteReview, addComment, generateAISummary,
+      fetchApartmentDetail,
     }}>
       {children}
     </DataContext.Provider>
@@ -88,8 +125,4 @@ export function DataProvider({ children }) {
 
 export function useData() {
   return useContext(DataContext);
-}
-
-export function todayStr() {
-  return new Date().toISOString().split('T')[0];
 }

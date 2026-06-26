@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useData } from "../context/DataContext";
 import { useAuth } from "../context/AuthContext";
 import { useToast } from "../context/ToastContext";
-import { stars, getUserById, formatDate } from "../data/mockData";
+import { stars, formatDate } from "../data/mockData";
 import TopNav from "../components/TopNav";
 import ReviewModal from "../components/ReviewModal";
 import EditModal from "../components/EditModal";
@@ -14,7 +14,8 @@ export default function ApartmentDetail() {
   const navigate = useNavigate();
   const aptId = Number(id);
   const { apartments, reviews, comments, getAptRating, getAptReviewCount,
-    addReview, editReview, deleteReview, addComment, generateAISummary } = useData();
+    addReview, editReview, deleteReview, addComment, generateAISummary,
+    fetchApartmentDetail } = useData();
   const { user } = useAuth();
   const { showToast } = useToast();
 
@@ -24,6 +25,10 @@ export default function ApartmentDetail() {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [editReviewObj, setEditReviewObj] = useState(null);
   const [deleteId, setDeleteId] = useState(null);
+
+  useEffect(() => {
+    fetchApartmentDetail(aptId);
+  }, [aptId]);
 
   const apt = apartments.find(a => a.id === aptId);
   if (!apt) return null;
@@ -64,10 +69,10 @@ export default function ApartmentDetail() {
               <div>
                 <h1>{apt.name}</h1>
                 <div className="neighbourhood">📍 {apt.address} · {apt.neighbourhood}</div>
-                <p style={{ color: "var(--gray-500)", fontSize: "14px", marginTop: "8px" }}>{apt.description}</p>
+                {apt.description && <p style={{ color: "var(--gray-500)", fontSize: "14px", marginTop: "8px" }}>{apt.description}</p>}
               </div>
               <div className="detail-rating">
-                <div className="big-num">{rating.toFixed(1)}</div>
+                <div className="big-num">{Number(rating || 0).toFixed(1)}</div>
                 <div className="stars">{stars(rating)}</div>
                 <div className="count">{count} reviews</div>
               </div>
@@ -110,7 +115,6 @@ export default function ApartmentDetail() {
                     <button className="btn btn-secondary btn-sm" onClick={() => setReviewOpen(true)}>+ Write a Review</button>
                   </div>
                   {revs.map(r => {
-                    const ru = getUserById(r.userId);
                     const cs = comments.filter(c => c.reviewId === r.id);
                     const isOwn = user && r.userId === user.id;
                     const show = openComments[r.id] ?? cs.length > 0;
@@ -118,20 +122,15 @@ export default function ApartmentDetail() {
                       <div className="review-item" key={r.id}>
                         <div className="review-top">
                           <div className="review-author">
-                            <div className="avatar" style={{ background: isOwn ? "var(--blue-100)" : "var(--gray-100)", color: isOwn ? "var(--blue-600)" : "var(--gray-500)" }}>{ru ? ru.initials : "??"}</div>
+                            <div className="avatar" style={{ background: isOwn ? "var(--blue-100)" : "var(--gray-100)", color: isOwn ? "var(--blue-600)" : "var(--gray-500)" }}>{r.userInitials || "??"}</div>
                             <div className="info">
-                              <div className="name">{ru ? ru.name : "Anonymous"}{isOwn ? " (you)" : ""}</div>
+                              <div className="name">{r.userName || "Anonymous"}{isOwn ? " (you)" : ""}</div>
                               <div className="date">{formatDate(r.date)}</div>
                             </div>
                           </div>
                           <div className="review-stars">{stars(r.rating)}</div>
                         </div>
                         <div className="review-body">{r.body}</div>
-                        {r.media.length > 0 && (
-                          <div className="review-media">
-                            {r.media.map((m, idx) => <div className="media-thumb" key={idx}>{m === "video" ? "🎥" : "📷"}</div>)}
-                          </div>
-                        )}
                         <div className="review-actions">
                           <button onClick={() => toggleComments(r.id)}>💬 {cs.length} comment{cs.length !== 1 ? "s" : ""}</button>
                           {isOwn && <button onClick={() => setEditReviewObj(r)}>✏️ Edit</button>}
@@ -139,16 +138,13 @@ export default function ApartmentDetail() {
                         </div>
                         {show && (
                           <div className="comments-section" style={{ display: "block" }}>
-                            {cs.map(c => {
-                              const cu = getUserById(c.userId);
-                              return (
-                                <div className="comment-item" key={c.id}>
-                                  <span className="comment-author">{cu ? cu.name : "Anonymous"}</span>
-                                  <span className="comment-date">{formatDate(c.date)}</span>
-                                  <div className="comment-body">{c.body}</div>
-                                </div>
-                              );
-                            })}
+                            {cs.map(c => (
+                              <div className="comment-item" key={c.id}>
+                                <span className="comment-author">{c.userName || "Anonymous"}</span>
+                                <span className="comment-date">{formatDate(c.date)}</span>
+                                <div className="comment-body">{c.body}</div>
+                              </div>
+                            ))}
                           </div>
                         )}
                         {show && (

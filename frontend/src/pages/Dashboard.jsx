@@ -6,12 +6,13 @@ import TopNav from "../components/TopNav";
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { apartments, reviews, getAptRating, getAptReviewCount } = useData();
+  const { apartments, getAptRating, getAptReviewCount } = useData();
   const [search, setSearch] = useState("");
   const [neighbourhood, setNeighbourhood] = useState("all");
   const [sort, setSort] = useState("rating-desc");
 
   const hoods = [...new Set(apartments.map(a => a.neighbourhood))];
+  const totalReviews = apartments.reduce((sum, a) => sum + (a.reviews || 0), 0);
 
   const apts = useMemo(() => {
     let list = [...apartments];
@@ -23,7 +24,7 @@ export default function Dashboard() {
     else if (sort === 'reviews-desc') list.sort((a, b) => b.count - a.count);
     else if (sort === 'newest') list.sort((a, b) => b.id - a.id);
     return list;
-  }, [apartments, reviews, search, neighbourhood, sort]);
+  }, [apartments, search, neighbourhood, sort]);
 
   return (
     <div className="view active">
@@ -37,7 +38,7 @@ export default function Dashboard() {
             </div>
             <div className="dash-stats">
               <div className="stat-chip"><strong>{apartments.length}</strong>&nbsp;apartments</div>
-              <div className="stat-chip"><strong>{reviews.length}</strong>&nbsp;reviews</div>
+              <div className="stat-chip"><strong>{totalReviews}</strong>&nbsp;reviews</div>
               <div className="stat-chip"><strong>{hoods.length}</strong>&nbsp;neighbourhoods</div>
             </div>
             <div className="dash-filters">
@@ -66,7 +67,7 @@ export default function Dashboard() {
                   return (
                     <div className="apt-card" key={a.id} onClick={() => navigate(`/apartment/${a.id}`)}>
                       <div className="apt-thumb" style={{ backgroundImage: `url('${a.img}')`, backgroundSize: "cover", backgroundPosition: "center" }}>
-                        <div className="rating-badge"><span className="star">★</span> {a.rating.toFixed(1)}</div>
+                        <div className="rating-badge"><span className="star">★</span> {Number(a.rating || 0).toFixed(1)}</div>
                       </div>
                       <div className="apt-body">
                         <h3>{a.name}</h3>
